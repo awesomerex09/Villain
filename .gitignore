@@ -1,0 +1,49 @@
+# Self-Mirror .gitignore
+
+# Digital Twin profiles (private — never commit personal data)
+twin_profile/
+
+# Generated Exes (致敬 ex-skill, also private)
+exes/*/Villain_*.md
+exes/*/memories.md
+exes/*/persona.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+*.whl
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temp / output
+/tmp/
+*.tmp
+*.log
+
+# Sensitive / parser output
+*_out.txt
+*_parsed.txt
