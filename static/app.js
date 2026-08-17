@@ -20,12 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Provider Selection ---
     llmProviderSelect.addEventListener('change', (e) => {
-        if (e.target.value === 'demo') {
-            apiKeyGroup.style.display = 'none';
-        } else {
-            apiKeyGroup.style.display = 'block';
-            apiKeyInput.placeholder = e.target.value === 'anthropic' ? 'sk-ant-...' : 'sk-proj-...';
-        }
+        apiKeyInput.placeholder = e.target.value === 'anthropic' ? 'sk-ant-...' : 'sk-proj-...';
     });
 
     // --- Drag & Drop Upload ---
@@ -95,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const provider = llmProviderSelect.value;
         const key = apiKeyInput.value.trim();
 
-        if (provider !== 'demo' && !key) {
+        if (!key) {
             alert('請輸入 API Key！');
             return;
         }

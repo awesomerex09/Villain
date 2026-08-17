@@ -34,15 +34,14 @@
                 <div class="form-group">
                     <label for="llm-provider">LLM 模型 (Provider)</label>
                     <select id="llm-provider">
-                        <option value="demo">Dry-Run (測試用，無須 API Key)</option>
                         <option value="anthropic">Anthropic (Claude)</option>
                         <option value="openai">OpenAI (GPT-4o)</option>
                     </select>
                 </div>
 
-                <div class="form-group" id="api-key-group" style="display: none;">
+                <div class="form-group" id="api-key-group">
                     <label for="api-key">API Key</label>
-                    <input type="password" id="api-key" placeholder="輸入 API 金鑰">
+                    <input type="password" id="api-key" placeholder="sk-ant-...">
                 </div>
 
                 <div class="upload-area" id="upload-area">

@@ -1,9 +1,9 @@
 :root {
-    --bg-color: #f5f5f7;
+    --bg-color: #E8E6DF;
     --card-bg: rgba(255, 255, 255, 0.7);
     --glass-border: rgba(255, 255, 255, 0.5);
     --text-main: #1d1d1f;
-    --text-secondary: #86868b;
+    --text-secondary: #5a5a5e;
     --accent-blue: #007aff;
     --accent-blue-hover: #0066d6;
     --accent-red: #ff3b30;
@@ -11,16 +11,6 @@
     --radius-md: 10px;
     --spacing-md: 16px;
     --spacing-lg: 24px;
-}
-
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg-color: #000000;
-        --card-bg: rgba(28, 28, 30, 0.7);
-        --glass-border: rgba(255, 255, 255, 0.1);
-        --text-main: #f5f5f7;
-        --text-secondary: #a1a1a6;
-    }
 }
 
 * {
@@ -161,9 +151,7 @@ select:focus {
     justify-content: space-between;
 }
 
-@media (prefers-color-scheme: dark) {
-    .file-item { background: rgba(255, 255, 255, 0.05); }
-}
+
 
 /* Buttons */
 button {
@@ -288,9 +276,7 @@ button:disabled {
     border-bottom-left-radius: 4px;
 }
 
-@media (prefers-color-scheme: dark) {
-    .message.twin .bubble { background-color: rgba(255, 255, 255, 0.1); }
-}
+
 
 .message.system .bubble {
     background-color: transparent;
