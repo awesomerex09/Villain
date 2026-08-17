@@ -1,7 +1,6 @@
 @echo off
-chcp 65001 > nul
 echo ==============================================
-echo  Self-Mirror — Web Interface
+echo  Self-Mirror - Web Interface
 echo ==============================================
 echo.
 
@@ -36,8 +35,8 @@ echo ==============================================
 echo  [SUCCESS] Self-Mirror Web is running!
 echo  Please use the web interface in your browser.
 echo.
-echo  Note: To stop the server, click "關閉系統" 
-echo  in the top right corner of the web interface,
-echo  or close this command window.
+echo  Note: To stop the server, click "Shutdown System" 
+echo  (the red button) in the top right corner 
+echo  of the web interface, or close this window.
 echo ==============================================
 pause
