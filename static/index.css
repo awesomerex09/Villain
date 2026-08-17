@@ -271,9 +271,11 @@ button:disabled {
 }
 
 .message.twin .bubble {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: #ffffff;
     color: var(--text-main);
     border-bottom-left-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.03);
 }
 
 

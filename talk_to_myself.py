@@ -92,15 +92,17 @@ def call_llm_chat(
     system_prompt: str,
     conversation: list[dict],
     llm_provider: str,
+    base_url: str = None,
+    model: str = None,
 ) -> str:
     """Call LLM with conversation history."""
     
     if llm_provider == 'anthropic':
         try:
             import anthropic
-            client = anthropic.Anthropic()
+            client = anthropic.Anthropic(base_url=base_url) if base_url else anthropic.Anthropic()
             response = client.messages.create(
-                model='claude-opus-4-5',
+                model=model or 'claude-opus-4-5',
                 max_tokens=4096,
                 system=system_prompt,
                 messages=conversation,
@@ -112,10 +114,10 @@ def call_llm_chat(
     elif llm_provider == 'openai':
         try:
             import openai
-            client = openai.OpenAI()
+            client = openai.OpenAI(base_url=base_url) if base_url else openai.OpenAI()
             messages = [{'role': 'system', 'content': system_prompt}] + conversation
             response = client.chat.completions.create(
-                model='gpt-4o',
+                model=model or 'gpt-4o',
                 messages=messages,
                 max_tokens=4096,
             )
@@ -143,7 +145,7 @@ it will respond based on your actual behavioral patterns and decision logic.
 
 # ── Interactive loop ──────────────────────────────────────────────────────────
 
-def run_interactive(system_prompt: str, name: str, llm_provider: str):
+def run_interactive(system_prompt: str, name: str, llm_provider: str, base_url: str = None, model: str = None):
     """Run the interactive mirror conversation."""
     conversation = []
 
@@ -189,7 +191,7 @@ def run_interactive(system_prompt: str, name: str, llm_provider: str):
         conversation.append({'role': 'user', 'content': user_input})
 
         print(f"\n[{name} (Digital Twin)] ", end='', flush=True)
-        response = call_llm_chat(system_prompt, conversation, llm_provider)
+        response = call_llm_chat(system_prompt, conversation, llm_provider, base_url, model)
         print(response)
         print()
 
@@ -214,6 +216,10 @@ Examples:
     parser.add_argument('--llm', default='anthropic',
                         choices=['anthropic', 'openai', 'demo'],
                         help='LLM provider (default: anthropic)')
+    parser.add_argument('--base-url', default=None,
+                        help='Custom API base URL (for openai-compatible endpoints)')
+    parser.add_argument('--model', default=None,
+                        help='Custom model name')
     parser.add_argument('--scenario', default=None,
                         help='Single-shot: send one scenario and exit')
     args = parser.parse_args()
@@ -226,11 +232,11 @@ Examples:
         # Single-shot mode
         conversation = [{'role': 'user', 'content': args.scenario}]
         print(f"\n[{args.name} (Digital Twin)]\n")
-        response = call_llm_chat(system_prompt, conversation, args.llm)
+        response = call_llm_chat(system_prompt, conversation, args.llm, args.base_url, args.model)
         print(response)
     else:
         # Interactive mode
-        run_interactive(system_prompt, args.name, args.llm)
+        run_interactive(system_prompt, args.name, args.llm, args.base_url, args.model)
 
 
 if __name__ == '__main__':

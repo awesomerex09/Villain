@@ -42,8 +42,10 @@ def upload_chats():
 def build_twin():
     data = request.json
     target_name = data.get('target_name', 'Villain')
-    llm_provider = data.get('llm_provider', 'demo')
+    llm_provider = data.get('llm_provider', 'anthropic')
     api_key = data.get('api_key', '')
+    base_url = data.get('base_url', '')
+    model = data.get('model', '')
 
     # Set API key to environment if provided
     env = os.environ.copy()
@@ -64,6 +66,10 @@ def build_twin():
         cmd.append('--dry-run')
     else:
         cmd.extend(['--llm', llm_provider])
+    if base_url:
+        cmd.extend(['--base-url', base_url])
+    if model:
+        cmd.extend(['--model', model])
 
     try:
         result = subprocess.run(cmd, env=env, capture_output=True, text=True)
@@ -78,8 +84,10 @@ def build_twin():
 def chat():
     data = request.json
     target_name = data.get('target_name', 'Villain')
-    llm_provider = data.get('llm_provider', 'demo')
+    llm_provider = data.get('llm_provider', 'anthropic')
     api_key = data.get('api_key', '')
+    base_url = data.get('base_url', '')
+    model = data.get('model', '')
     scenario = data.get('message', '')
 
     if not scenario:
@@ -100,6 +108,10 @@ def chat():
         '--llm', llm_provider,
         '--scenario', scenario
     ]
+    if base_url:
+        cmd.extend(['--base-url', base_url])
+    if model:
+        cmd.extend(['--model', model])
 
     try:
         result = subprocess.run(cmd, env=env, capture_output=True, text=True)

@@ -62,7 +62,7 @@ def build_llm_prompt(prompt_file: str, context: dict) -> str:
     return template
 
 
-def call_llm(prompt: str, llm_provider: str = 'anthropic') -> str:
+def call_llm(prompt: str, llm_provider: str = 'anthropic', base_url: str = None, model: str = None) -> str:
     """
     Call an LLM with the given prompt.
     Supports: anthropic (Claude), openai (GPT)
@@ -72,9 +72,9 @@ def call_llm(prompt: str, llm_provider: str = 'anthropic') -> str:
     if llm_provider == 'anthropic':
         try:
             import anthropic
-            client = anthropic.Anthropic()
+            client = anthropic.Anthropic(base_url=base_url) if base_url else anthropic.Anthropic()
             message = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model=model or "claude-3-5-sonnet-20241022",
                 max_tokens=8192,
                 messages=[{"role": "user", "content": prompt}]
             )
@@ -86,9 +86,9 @@ def call_llm(prompt: str, llm_provider: str = 'anthropic') -> str:
     elif llm_provider == 'openai':
         try:
             import openai
-            client = openai.OpenAI()
+            client = openai.OpenAI(base_url=base_url) if base_url else openai.OpenAI()
             response = client.chat.completions.create(
-                model="gpt-4o",
+                model=model or "gpt-4o",
                 messages=[{"role": "user", "content": prompt}]
             )
             return response.choices[0].message.content
@@ -177,7 +177,7 @@ def stage_b_clean(records: list[dict], target_name: str, deidentify: bool) -> li
     return cleaned
 
 
-def stage_c_analyze(cleaned_records: list[dict], target_name: str, llm_provider: str) -> dict:
+def stage_c_analyze(cleaned_records: list[dict], target_name: str, llm_provider: str, base_url: str = None, model: str = None) -> dict:
     """Stage C: LLM analysis."""
     print("\n[Stage C] Running LLM analysis (this may take a minute)...", file=sys.stderr)
     
@@ -185,18 +185,18 @@ def stage_c_analyze(cleaned_records: list[dict], target_name: str, llm_provider:
     
     print("[Stage C]  → Objective analysis...", file=sys.stderr)
     analyzer_prompt = build_llm_prompt('objective_analyzer.md', {}) + f"\n\n## Behavioral Logs\n```json\n{context_text}\n```"
-    objective_report = call_llm(analyzer_prompt, llm_provider)
+    objective_report = call_llm(analyzer_prompt, llm_provider, base_url, model)
     
     print("[Stage C]  → Knowledge extraction...", file=sys.stderr)
     knowledge_prompt = build_llm_prompt('knowledge_extractor.md', {}) + f"\n\n## Behavioral Logs\n```json\n{context_text}\n```"
-    knowledge_map = call_llm(knowledge_prompt, llm_provider)
+    knowledge_map = call_llm(knowledge_prompt, llm_provider, base_url, model)
     
     print("[Stage C]  → Twin synthesis...", file=sys.stderr)
     twin_prompt = (
         build_llm_prompt('twin_builder.md', {'name': target_name}) +
         f"\n\n## Objective Analysis\n{objective_report}\n\n## Knowledge Map\n{knowledge_map}"
     )
-    twin_result = call_llm(twin_prompt, llm_provider)
+    twin_result = call_llm(twin_prompt, llm_provider, base_url, model)
     
     return {
         'objective_report': objective_report,
@@ -270,6 +270,10 @@ Examples:
                         help='LLM provider (default: anthropic). Use "demo" for dry run.')
     parser.add_argument('--deidentify', action='store_true',
                         help='De-identify third-party names in the analysis')
+    parser.add_argument('--base-url', default=None,
+                        help='Custom API base URL (for openai-compatible endpoints)')
+    parser.add_argument('--model', default=None,
+                        help='Custom model name')
     parser.add_argument('--dry-run', action='store_true',
                         help='Parse and clean only, skip LLM analysis (same as --llm demo)')
     args = parser.parse_args()
@@ -290,7 +294,7 @@ Examples:
 
     records = stage_a_parse(args.source_type, file_path=args.file, dir_path=args.dir, target_name=args.target_name)
     cleaned = stage_b_clean(records, args.target_name, args.deidentify)
-    analyses = stage_c_analyze(cleaned, args.target_name, llm_provider)
+    analyses = stage_c_analyze(cleaned, args.target_name, llm_provider, args.base_url, args.model)
     stage_d_write(analyses, args.target_name)
 
     print("\n" + "=" * 60)

@@ -44,9 +44,23 @@
                     <input type="password" id="api-key" placeholder="sk-ant-...">
                 </div>
 
+                <div class="form-group">
+                    <label for="base-url">Base URL (選填，用於自訂/本地端點)</label>
+                    <input type="text" id="base-url" placeholder="例如: http://127.0.0.1:31415/v1">
+                </div>
+
+                <div class="form-group">
+                    <label for="model-name">Model Name (選填，用於自訂端點)</label>
+                    <input type="text" id="model-name" placeholder="例如: qwen2.5-7b">
+                </div>
+
                 <div class="upload-area" id="upload-area">
-                    <p>拖曳對話檔案 (.txt) 到這裡，或點擊選擇檔案</p>
+                    <p>拖曳對話檔案 (.txt) 或資料夾到這裡，或點擊選擇檔案</p>
                     <input type="file" id="file-input" multiple accept=".txt,.log,.csv" style="display: none;">
+                </div>
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <button id="btn-select-folder" class="btn-secondary" style="font-size: 13px; padding: 6px 12px; border: 1px solid var(--glass-border); border-radius: 6px; background: rgba(0,0,0,0.02); color: var(--text-main);">或者選擇資料夾</button>
+                    <input type="file" id="folder-input" webkitdirectory directory style="display: none;">
                 </div>
                 <div id="file-list" class="file-list"></div>
 

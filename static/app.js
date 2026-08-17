@@ -4,8 +4,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const llmProviderSelect = document.getElementById('llm-provider');
     const apiKeyGroup = document.getElementById('api-key-group');
     const apiKeyInput = document.getElementById('api-key');
+    const baseUrlInput = document.getElementById('base-url');
+    const modelNameInput = document.getElementById('model-name');
     const uploadArea = document.getElementById('upload-area');
     const fileInput = document.getElementById('file-input');
+    const folderInput = document.getElementById('folder-input');
+    const btnSelectFolder = document.getElementById('btn-select-folder');
     const fileList = document.getElementById('file-list');
     const btnBuild = document.getElementById('btn-build');
     const buildLog = document.getElementById('build-log');
@@ -43,6 +47,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     fileInput.addEventListener('change', (e) => {
         handleFiles(e.target.files);
+    });
+
+    btnSelectFolder.addEventListener('click', () => folderInput.click());
+
+    folderInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files).filter(f => f.name.endsWith('.txt') || f.name.endsWith('.log') || f.name.endsWith('.csv'));
+        if (files.length === 0) {
+            alert('資料夾中沒有找到支援的對話紀錄檔 (.txt, .log, .csv)');
+            return;
+        }
+        handleFiles(files);
     });
 
     function handleFiles(files) {
@@ -89,6 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const name = targetNameInput.value.trim() || 'Villain';
         const provider = llmProviderSelect.value;
         const key = apiKeyInput.value.trim();
+        const baseUrl = baseUrlInput.value.trim();
+        const modelName = modelNameInput.value.trim();
 
         if (!key) {
             alert('請輸入 API Key！');
@@ -107,7 +124,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     target_name: name,
                     llm_provider: provider,
-                    api_key: key
+                    api_key: key,
+                    base_url: baseUrl,
+                    model: modelName
                 })
             });
             const data = await res.json();
@@ -174,6 +193,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     target_name: targetNameInput.value.trim() || 'Villain',
                     llm_provider: llmProviderSelect.value,
                     api_key: apiKeyInput.value.trim(),
+                    base_url: baseUrlInput.value.trim(),
+                    model: modelNameInput.value.trim(),
                     message: text
                 })
             });
