@@ -5,10 +5,11 @@ Self-Mirror: Digital Twin System
 
 Parses LINE / Messenger / iMessage exported chat logs into a standardized
 (Timestamp, Sender, Message) format for downstream analysis.
+Supports single files or entire directories containing multiple chat files.
 
 Usage:
     python3 tools/chat_parser.py --file path/to/chat.txt --target "Villain" --output /tmp/parsed.txt
-    python3 tools/chat_parser.py --file path/to/chat.txt --target "Villain" --format json
+    python3 tools/chat_parser.py --dir raw_chats/ --target "Villain" --output /tmp/parsed.txt
 """
 
 import argparse
@@ -24,10 +25,10 @@ from typing import Optional
 
 def detect_format(content: str) -> str:
     """Auto-detect chat export format."""
-    first_500 = content[:500]
+    first_500 = content[:1000]
 
-    # LINE: "[2024/01/15 14:30] UserName: Message"
-    if re.search(r'\[\d{4}/\d{2}/\d{2} \d{2}:\d{2}\]', first_500):
+    # LINE: "[2024/01/15 14:30] UserName: Message" or "2024/01/15 14:30\tUserName\tMessage"
+    if re.search(r'\[\d{4}/\d{2}/\d{2} \d{2}:\d{2}\]', first_500) or re.search(r'\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2}\t.+?\t', first_500):
         return 'line'
 
     # Messenger: "UserName\nMMM DD, YYYY HH:MM\nMessage"
@@ -38,11 +39,11 @@ def detect_format(content: str) -> str:
     if re.search(r'^(Me|.+?)\s{2,}\d{1,2}:\d{2}', first_500, re.MULTILINE):
         return 'imessage'
 
-    # Generic: "YYYY-MM-DD HH:MM:SS Sender: Message"
-    if re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} .+?:', first_500):
+    # Generic: "YYYY-MM-DD HH:MM:SS Sender: Message" or "[YYYY-MM-DD HH:MM:SS] Sender: Message"
+    if re.search(r'\[?\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}(:\d{2})?\]?\s+.+?:', first_500):
         return 'generic'
 
-    return 'unknown'
+    return 'generic'
 
 
 # ── Format parsers ────────────────────────────────────────────────────────────
@@ -50,18 +51,33 @@ def detect_format(content: str) -> str:
 def parse_line(content: str) -> list[dict]:
     """Parse LINE exported chat log."""
     records = []
-    pattern = re.compile(
-        r'\[(\d{4}/\d{2}/\d{2} \d{2}:\d{2})\]\s+(.+?):\s+(.+)'
-    )
+    
+    # Format 1: [2024/01/15 14:30] Sender: Message
+    pattern1 = re.compile(r'\[(\d{4}/\d{2}/\d{2} \d{2}:\d{2})\]\s+(.+?):\s+(.+)')
+    # Format 2: 2024/01/15 14:30\tSender\tMessage
+    pattern2 = re.compile(r'(\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2})\t([^\t]+)\t(.+)')
+    # Format 3: 2024.01.15 14:30 Sender: Message
+    pattern3 = re.compile(r'(\d{4}[./-]\d{2}[./-]\d{2}\s+\d{2}:\d{2})\s+([^:\n]+):\s+(.+)')
+
     for line in content.splitlines():
-        m = pattern.match(line.strip())
-        if m:
-            ts, sender, message = m.group(1), m.group(2), m.group(3)
-            records.append({
-                'timestamp': ts,
-                'sender': sender.strip(),
-                'message': message.strip(),
-            })
+        line_str = line.strip()
+        if not line_str:
+            continue
+            
+        m1 = pattern1.match(line_str)
+        if m1:
+            records.append({'timestamp': m1.group(1), 'sender': m1.group(2).strip(), 'message': m1.group(3).strip()})
+            continue
+            
+        m2 = pattern2.match(line_str)
+        if m2:
+            records.append({'timestamp': m2.group(1), 'sender': m2.group(2).strip(), 'message': m2.group(3).strip()})
+            continue
+
+        m3 = pattern3.match(line_str)
+        if m3:
+            records.append({'timestamp': m3.group(1), 'sender': m3.group(2).strip(), 'message': m3.group(3).strip()})
+
     return records
 
 
@@ -78,7 +94,6 @@ def parse_messenger(content: str) -> list[dict]:
             i += 1
             continue
 
-        # Check if next line is a timestamp
         if i + 1 < len(lines) and ts_pattern.match(lines[i + 1].strip()):
             sender = line
             ts = lines[i + 1].strip()
@@ -103,7 +118,7 @@ def parse_generic(content: str) -> list[dict]:
     """Parse generic 'YYYY-MM-DD HH:MM:SS Sender: Message' format."""
     records = []
     pattern = re.compile(
-        r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+(.+?):\s+(.+)'
+        r'\[?(\d{4}[./-]\d{2}[./-]\d{2}\s+\d{2}:\d{2}(?::\d{2})?)\]?\s+([^:\n]+):\s+(.+)'
     )
     for line in content.splitlines():
         m = pattern.match(line.strip())
@@ -123,19 +138,39 @@ PARSERS = {
 }
 
 
+def parse_single_file(file_path: Path) -> list[dict]:
+    """Parse a single text file into records."""
+    try:
+        content = file_path.read_text(encoding='utf-8', errors='replace')
+    except Exception as e:
+        print(f"[WARN] Failed to read {file_path}: {e}", file=sys.stderr)
+        return []
+
+    fmt = detect_format(content)
+    parser = PARSERS.get(fmt, parse_generic)
+    records = parser(content)
+    
+    # Fallback to generic if specific parser found nothing
+    if not records and fmt != 'generic':
+        records = parse_generic(content)
+        
+    return records
+
+
 # ── Normalizer ────────────────────────────────────────────────────────────────
 
 def normalize(records: list[dict], target: Optional[str] = None) -> list[dict]:
-    """
-    Normalize records. If target is specified, mark records with is_target flag.
-    Filter out system messages and empty messages.
-    """
     system_patterns = [
         re.compile(r'^\[.*joined.*\]$', re.I),
         re.compile(r'^\[.*left.*\]$', re.I),
         re.compile(r'^\[Sticker\]$'),
         re.compile(r'^\[Image\]$'),
         re.compile(r'^\[File\]$'),
+        re.compile(r'^\[貼圖\]$'),
+        re.compile(r'^\[照片\]$'),
+        re.compile(r'^\[檔案\]$'),
+        re.compile(r'^\[語音訊息\]$'),
+        re.compile(r'^通話時間.*$', re.I),
     ]
 
     normalized = []
@@ -163,54 +198,60 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # 單一檔案
   python3 tools/chat_parser.py --file chat.txt --target "Villain"
-  python3 tools/chat_parser.py --file chat.txt --target "Villain" --format json --output out.json
-  python3 tools/chat_parser.py --file chat.txt --detect-only
+  
+  # 多個對話紀錄（指定資料夾）
+  python3 tools/chat_parser.py --dir raw_chats/ --target "Villain" --format json --output out.json
         """
     )
-    parser.add_argument('--file', required=True, help='Path to chat log file')
+    parser.add_argument('--file', default=None, help='Path to single chat log file')
+    parser.add_argument('--dir', default=None, help='Path to directory containing multiple chat log files')
     parser.add_argument('--target', default=None, help='Target user name to mark (optional)')
     parser.add_argument('--format', choices=['json', 'text'], default='text', help='Output format')
     parser.add_argument('--output', default=None, help='Output file path (default: stdout)')
-    parser.add_argument('--detect-only', action='store_true', help='Only detect format, do not parse')
     args = parser.parse_args()
 
-    # Read file
-    file_path = Path(args.file)
-    if not file_path.exists():
-        print(f"[ERROR] File not found: {args.file}", file=sys.stderr)
+    if not args.file and not args.dir:
+        print("[ERROR] You must provide either --file or --dir", file=sys.stderr)
         sys.exit(1)
 
-    content = file_path.read_text(encoding='utf-8', errors='replace')
+    all_records = []
 
-    # Detect format
-    fmt = detect_format(content)
-    print(f"[INFO] Detected format: {fmt}", file=sys.stderr)
+    if args.file:
+        file_path = Path(args.file)
+        if not file_path.exists():
+            print(f"[ERROR] File not found: {args.file}", file=sys.stderr)
+            sys.exit(1)
+        all_records.extend(parse_single_file(file_path))
+    
+    if args.dir:
+        dir_path = Path(args.dir)
+        if not dir_path.exists() or not dir_path.is_dir():
+            print(f"[ERROR] Directory not found: {args.dir}", file=sys.stderr)
+            sys.exit(1)
+        
+        # 遍歷資料夾中的所有 .txt, .log, .csv 檔案
+        files = sorted(list(dir_path.glob('*.txt')) + list(dir_path.glob('*.log')) + list(dir_path.glob('*.csv')))
+        print(f"[INFO] Found {len(files)} chat files in {args.dir}", file=sys.stderr)
+        for f in files:
+            recs = parse_single_file(f)
+            print(f"[INFO] Parsed {len(recs)} messages from {f.name}", file=sys.stderr)
+            all_records.extend(recs)
 
-    if args.detect_only:
-        print(fmt)
-        return
-
-    if fmt not in PARSERS:
-        print(f"[WARN] Unknown format. Falling back to generic parser.", file=sys.stderr)
-        fmt = 'generic'
-
-    # Parse
-    records = PARSERS[fmt](content)
-    records = normalize(records, target=args.target)
-
-    print(f"[INFO] Parsed {len(records)} messages.", file=sys.stderr)
+    all_records = normalize(all_records, target=args.target)
+    print(f"[INFO] Total valid messages parsed: {len(all_records)}", file=sys.stderr)
 
     if args.target:
-        target_count = sum(1 for r in records if r['is_target'])
+        target_count = sum(1 for r in all_records if r.get('is_target'))
         print(f"[INFO] Target '{args.target}' messages: {target_count}", file=sys.stderr)
 
     # Output
     if args.format == 'json':
-        output = json.dumps(records, ensure_ascii=False, indent=2)
+        output = json.dumps(all_records, ensure_ascii=False, indent=2)
     else:
         lines = []
-        for r in records:
+        for r in all_records:
             marker = '>>> ' if r.get('is_target') else '    '
             lines.append(f"{marker}[{r['timestamp']}] {r['sender']}: {r['message']}")
         output = '\n'.join(lines)

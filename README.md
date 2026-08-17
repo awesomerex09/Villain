@@ -27,22 +27,31 @@
 
 ---
 
-### 2. 第一步：建置你的數位雙生 (`build_twin.py`)
+### 2. 第一步：準備資料與建置雙生 (`build_twin.py`)
 
-提供你的原始資料（聊天紀錄、Discord 日誌或 GitHub Commit），執行一鍵萃取與建置：
+你可以直接放單一檔案，或是放多個對話檔案：
 
+#### 情況 A：只有單個對話檔案
+把檔案（例如 `chat.txt` 或 LINE 導出的文字檔）放在專案資料夾下：
 ```bash
-# 格式範例：解析聊天紀錄
-py -3 build_twin.py --source-type chat --file path/to/chat.txt --target-name "Villain"
-
-# 支援的來源類型：
-# --source-type chat      LINE / Messenger / iMessage 等文字對話
-# --source-type discord   Discord Webhook 導出的 JSON 檔案
-# --source-type github    GitHub Commit 歷史紀錄
-
-# 無 API Key 測試 (Demo / Dry-Run 模式)：
-py -3 build_twin.py --source-type chat --file chat.txt --target-name "Villain" --dry-run
+py -3 build_twin.py --source-type chat --file chat.txt --target-name "Villain"
 ```
+
+#### 情況 B：有多個對話紀錄（推薦）
+建立一個資料夾（例如 `data/chats/` 或 `raw_chats/`），把多個不同對象、群組的 `.txt`、`.log` 檔案通通放進去：
+```bash
+# 建立資料夾並放入多個 txt 檔
+mkdir data\chats
+
+# 直接指定資料夾，系統會自動批量讀取並合併所有對話：
+py -3 build_twin.py --source-type chat --dir data/chats --target-name "Villain"
+```
+
+#### 支援的來源類型：
+- `--source-type chat`：LINE / Messenger / iMessage 等對話紀錄
+- `--source-type discord`：Discord Webhook / DiscordChatExporter 導出的 JSON 檔案
+- `--source-type github`：GitHub Commit 歷史紀錄
+- `--dry-run`：無 LLM API Key 時的測試模式（只做解析與去識別化）
 
 **執行後系統會在 `twin_profile/` 生成三個核心檔案（已加入 .gitignore 保護隱私）：**
 - `Villain_core.md`：你的決策邏輯、底層原則與已知失敗模式。
@@ -64,7 +73,7 @@ py -3 talk_to_myself.py --scenario "我現在看到這檔股票跌破停損點�
 ```
 
 **`talk_to_myself.py` 的運作原理：**
-- 它會載入你的 `twin_profile/`（你的核心原則與歷史盲點）。
+- 載入你的 `twin_profile/`（你的核心原則與歷史盲點）。
 - 扮演「冷靜客觀的你自己」，不帶情緒偏誤地審視你目前的決策。
 - 提醒你：「你過去曾制定過『跌破直接停損』的硬規則，現在加碼符合你的過度自信盲點嗎？」。
 
@@ -72,11 +81,9 @@ py -3 talk_to_myself.py --scenario "我現在看到這檔股票跌破停損點�
 
 ## 🛠️ 工具腳本獨立使用 (Tools CLI)
 
-如果你想單獨處理資料：
-
 ```bash
-# 1. 聊天紀錄解析
-py -3 tools/chat_parser.py --file chat.txt --target "Villain" --format json --output parsed.json
+# 1. 聊天紀錄解析（支援單檔 --file 或多檔資料夾 --dir）
+py -3 tools/chat_parser.py --dir data/chats/ --target "Villain" --format json --output parsed.json
 
 # 2. 開發/交易日誌解析
 py -3 tools/dev_parser.py --file webhook.json --type discord --output dev_out.txt
@@ -111,7 +118,7 @@ self-mirror/
 │   ├── knowledge_extractor.md # 領域知識與硬規則萃取
 │   └── twin_builder.md      # 數位人格合成模板
 ├── tools/                   # Python 前處理工具庫
-│   ├── chat_parser.py       # 通用對話解析 (LINE/Messenger/iMessage)
+│   ├── chat_parser.py       # 通用對話解析 (支援單檔/資料夾多檔)
 │   ├── dev_parser.py        # 日誌解析 (Discord Webhook / GitHub Commits)
 │   ├── text_cleaner.py      # 去識別化與雜訊過濾
 │   └── twin_writer.py       # 雙生檔案輸出與增量更新管理

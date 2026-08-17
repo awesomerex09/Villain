@@ -11,6 +11,7 @@ Orchestrates the full pipeline:
 
 Usage:
     python build_twin.py --source-type chat --file chat.txt --target-name "Villain"
+    python build_twin.py --source-type chat --dir data/chats/ --target-name "Villain"
     python build_twin.py --source-type discord --file webhook.json --target-name "Villain"
     python build_twin.py --source-type github --file commits.json --target-name "Villain"
     python build_twin.py --help
@@ -64,8 +65,6 @@ def build_llm_prompt(prompt_file: str, context: dict) -> str:
 def call_llm(prompt: str, llm_provider: str = 'anthropic') -> str:
     """
     Call an LLM with the given prompt.
-    
-    This is a stub — connect your preferred LLM API here.
     Supports: anthropic (Claude), openai (GPT)
     """
     print(f"[INFO] Calling LLM ({llm_provider})...", file=sys.stderr)
@@ -75,7 +74,7 @@ def call_llm(prompt: str, llm_provider: str = 'anthropic') -> str:
             import anthropic
             client = anthropic.Anthropic()
             message = client.messages.create(
-                model="claude-opus-4-5",
+                model="claude-3-5-sonnet-20241022",
                 max_tokens=8192,
                 messages=[{"role": "user", "content": prompt}]
             )
@@ -123,19 +122,19 @@ Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 # ── Pipeline stages ───────────────────────────────────────────────────────────
 
-def stage_a_parse(source_type: str, file_path: str, target_name: str) -> list[dict]:
+def stage_a_parse(source_type: str, file_path: str = None, dir_path: str = None, target_name: str = 'Villain') -> list[dict]:
     """Stage A: Parse raw data."""
     print("\n[Stage A] Parsing raw data...", file=sys.stderr)
     
     tmp_output = TMP_DIR / 'self_mirror_parsed.json'
     
     if source_type == 'chat':
-        run_tool('chat_parser.py', [
-            '--file', file_path,
-            '--target', target_name,
-            '--format', 'json',
-            '--output', str(tmp_output),
-        ])
+        args = ['--target', target_name, '--format', 'json', '--output', str(tmp_output)]
+        if dir_path:
+            args += ['--dir', dir_path]
+        else:
+            args += ['--file', file_path]
+        run_tool('chat_parser.py', args)
     elif source_type == 'discord':
         run_tool('dev_parser.py', [
             '--file', file_path,
@@ -182,20 +181,16 @@ def stage_c_analyze(cleaned_records: list[dict], target_name: str, llm_provider:
     """Stage C: LLM analysis."""
     print("\n[Stage C] Running LLM analysis (this may take a minute)...", file=sys.stderr)
     
-    # Build analysis context
-    context_text = json.dumps(cleaned_records[:200], ensure_ascii=False, indent=2)  # limit tokens
+    context_text = json.dumps(cleaned_records[:300], ensure_ascii=False, indent=2)  # limit tokens
     
-    # Run objective analysis
     print("[Stage C]  → Objective analysis...", file=sys.stderr)
     analyzer_prompt = build_llm_prompt('objective_analyzer.md', {}) + f"\n\n## Behavioral Logs\n```json\n{context_text}\n```"
     objective_report = call_llm(analyzer_prompt, llm_provider)
     
-    # Run knowledge extraction
     print("[Stage C]  → Knowledge extraction...", file=sys.stderr)
     knowledge_prompt = build_llm_prompt('knowledge_extractor.md', {}) + f"\n\n## Behavioral Logs\n```json\n{context_text}\n```"
     knowledge_map = call_llm(knowledge_prompt, llm_provider)
     
-    # Build twin
     print("[Stage C]  → Twin synthesis...", file=sys.stderr)
     twin_prompt = (
         build_llm_prompt('twin_builder.md', {'name': target_name}) +
@@ -219,27 +214,19 @@ def stage_d_write(analyses: dict, target_name: str):
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     header = f"<!-- generated_at: {now} | source: build_twin.py -->\n\n"
     
-    # Write objective report
     report_path = TWIN_PROFILE_DIR / 'objective_report.md'
     report_path.write_text(header + analyses['objective_report'], encoding='utf-8')
     print(f"[Stage D] ✓ Written: {report_path}", file=sys.stderr)
     
-    # Write core + style (from twin synthesis)
     synthesis = analyses['twin_synthesis']
-    
     core_path = TWIN_PROFILE_DIR / f"{target_name}_core.md"
     style_path = TWIN_PROFILE_DIR / f"{target_name}_style.md"
     
-    # Simple split: look for the style file marker
-    if '# {Name} — Communication Style'.replace('{Name}', target_name) in synthesis:
-        split_marker = f"# {target_name} — Communication Style"
+    split_marker = f"# {target_name} — Communication Style"
+    if split_marker in synthesis:
         parts = synthesis.split(split_marker, 1)
         core_path.write_text(header + parts[0].strip(), encoding='utf-8')
-        style_path.write_text(header + split_marker + parts[1] if len(parts) > 1 else header + synthesis, encoding='utf-8')
-    elif '_style.md' in synthesis.lower():
-        # Try to split by File 1 / File 2 markers
-        core_path.write_text(header + synthesis, encoding='utf-8')
-        style_path.write_text(header + "# Communication Style\n\nSee core file for full synthesis.", encoding='utf-8')
+        style_path.write_text(header + split_marker + parts[1], encoding='utf-8')
     else:
         core_path.write_text(header + synthesis, encoding='utf-8')
         style_path.write_text(header + "# Communication Style\n\nGenerated from twin synthesis. See core file.", encoding='utf-8')
@@ -256,17 +243,26 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # 單一聊天記錄檔案
   python build_twin.py --source-type chat --file chat.txt --target-name "Villain"
+
+  # 多個聊天記錄檔案（指定資料夾）
+  python build_twin.py --source-type chat --dir data/chats/ --target-name "Villain"
+
+  # Discord Webhook 日誌
   python build_twin.py --source-type discord --file webhook.json --target-name "Villain" --llm openai
-  python build_twin.py --source-type github --file commits.json --target-name "Villain" --deidentify
+
+  # 乾跑測試（無需 API Key）
   python build_twin.py --source-type chat --file chat.txt --target-name "Villain" --dry-run
         """
     )
     parser.add_argument('--source-type', required=True,
                         choices=['chat', 'discord', 'github'],
                         help='Type of input data source')
-    parser.add_argument('--file', required=True,
-                        help='Path to input data file')
+    parser.add_argument('--file', default=None,
+                        help='Path to single input data file')
+    parser.add_argument('--dir', default=None,
+                        help='Path to directory containing multiple chat files')
     parser.add_argument('--target-name', default='Villain',
                         help='Your name/identifier in the logs (default: Villain)')
     parser.add_argument('--llm', default='anthropic',
@@ -278,18 +274,21 @@ Examples:
                         help='Parse and clean only, skip LLM analysis (same as --llm demo)')
     args = parser.parse_args()
 
+    if not args.file and not args.dir:
+        print("[ERROR] You must specify either --file or --dir", file=sys.stderr)
+        sys.exit(1)
+
     print("=" * 60)
     print("  Self-Mirror — Digital Twin Builder")
     print("=" * 60)
-    print(f"  Source:  {args.source_type} / {args.file}")
+    print(f"  Source:  {args.source_type} / {args.dir if args.dir else args.file}")
     print(f"  Target:  {args.target_name}")
     print(f"  LLM:     {'demo (dry run)' if args.dry_run else args.llm}")
     print("=" * 60)
 
     llm_provider = 'demo' if args.dry_run else args.llm
 
-    # Run pipeline
-    records = stage_a_parse(args.source_type, args.file, args.target_name)
+    records = stage_a_parse(args.source_type, file_path=args.file, dir_path=args.dir, target_name=args.target_name)
     cleaned = stage_b_clean(records, args.target_name, args.deidentify)
     analyses = stage_c_analyze(cleaned, args.target_name, llm_provider)
     stage_d_write(analyses, args.target_name)
