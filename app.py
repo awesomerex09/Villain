@@ -51,6 +51,7 @@ def build_twin():
 
     # Set API key to environment if provided
     env = os.environ.copy()
+    env['PYTHONIOENCODING'] = 'utf-8'  # Force UTF-8 encoding for subprocess to prevent CP950 errors
     if llm_provider == 'anthropic' and api_key:
         env['ANTHROPIC_API_KEY'] = api_key
     elif llm_provider == 'openai' and api_key:
@@ -97,6 +98,7 @@ def chat():
 
     # Set API key to environment if provided
     env = os.environ.copy()
+    env['PYTHONIOENCODING'] = 'utf-8'  # Force UTF-8 encoding for subprocess to prevent CP950 errors
     if llm_provider == 'anthropic' and api_key:
         env['ANTHROPIC_API_KEY'] = api_key
     elif llm_provider == 'openai' and api_key:

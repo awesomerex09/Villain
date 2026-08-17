@@ -140,11 +140,20 @@ PARSERS = {
 
 def parse_single_file(file_path: Path) -> list[dict]:
     """Parse a single text file into records."""
-    try:
-        content = file_path.read_text(encoding='utf-8', errors='replace')
-    except Exception as e:
-        print(f"[WARN] Failed to read {file_path}: {e}", file=sys.stderr)
-        return []
+    content = None
+    for enc in ['utf-8-sig', 'utf-16', 'utf-8', 'cp950', 'big5']:
+        try:
+            content = file_path.read_text(encoding=enc)
+            break
+        except UnicodeDecodeError:
+            continue
+    
+    if content is None:
+        try:
+            content = file_path.read_text(encoding='utf-8', errors='replace')
+        except Exception as e:
+            print(f"[WARN] Failed to read {file_path}: {e}", file=sys.stderr)
+            return []
 
     fmt = detect_format(content)
     parser = PARSERS.get(fmt, parse_generic)
