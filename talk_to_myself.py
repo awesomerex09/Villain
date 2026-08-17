@@ -100,7 +100,8 @@ def call_llm_chat(
     if llm_provider == 'anthropic':
         try:
             import anthropic
-            client = anthropic.Anthropic(base_url=base_url) if base_url else anthropic.Anthropic()
+            api_key = os.environ.get("ANTHROPIC_API_KEY", "dummy_key" if base_url else None)
+            client = anthropic.Anthropic(base_url=base_url, api_key=api_key) if base_url else anthropic.Anthropic(api_key=api_key)
             response = client.messages.create(
                 model=model or 'claude-opus-4-5',
                 max_tokens=4096,
@@ -110,11 +111,16 @@ def call_llm_chat(
             return response.content[0].text
         except ImportError:
             return _demo_response(conversation[-1]['content'] if conversation else '')
+        except Exception as e:
+            return f"[Error connecting to Anthropic/Custom API: {e}]"
     
     elif llm_provider == 'openai':
         try:
             import openai
-            client = openai.OpenAI(base_url=base_url) if base_url else openai.OpenAI()
+            # When using custom base_url, we might not need a real api_key, but the client requires one.
+            # We supply a dummy key if none is present in the environment to avoid ValidationError.
+            api_key = os.environ.get("OPENAI_API_KEY", "dummy_key" if base_url else None)
+            client = openai.OpenAI(base_url=base_url, api_key=api_key) if base_url else openai.OpenAI(api_key=api_key)
             messages = [{'role': 'system', 'content': system_prompt}] + conversation
             response = client.chat.completions.create(
                 model=model or 'gpt-4o',
@@ -124,6 +130,8 @@ def call_llm_chat(
             return response.choices[0].message.content
         except ImportError:
             return _demo_response(conversation[-1]['content'] if conversation else '')
+        except Exception as e:
+            return f"[Error connecting to OpenAI/Custom API: {e}]"
     
     else:
         return _demo_response(conversation[-1]['content'] if conversation else '')
