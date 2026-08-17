@@ -72,7 +72,8 @@ def call_llm(prompt: str, llm_provider: str = 'anthropic', base_url: str = None,
     if llm_provider == 'anthropic':
         try:
             import anthropic
-            api_key = os.environ.get("ANTHROPIC_API_KEY", "dummy_key" if base_url else None)
+            # Always fallback to a string to prevent None.strip() crash in SDK
+            api_key = os.environ.get("ANTHROPIC_API_KEY", "dummy_key")
             client = anthropic.Anthropic(base_url=base_url, api_key=api_key) if base_url else anthropic.Anthropic(api_key=api_key)
             message = client.messages.create(
                 model=model or "claude-3-5-sonnet-20241022",
@@ -87,7 +88,8 @@ def call_llm(prompt: str, llm_provider: str = 'anthropic', base_url: str = None,
     elif llm_provider == 'openai':
         try:
             import openai
-            api_key = os.environ.get("OPENAI_API_KEY", "dummy_key" if base_url else None)
+            # Always fallback to a string to prevent None.strip() crash in SDK
+            api_key = os.environ.get("OPENAI_API_KEY", "dummy_key")
             client = openai.OpenAI(base_url=base_url, api_key=api_key) if base_url else openai.OpenAI(api_key=api_key)
             response = client.chat.completions.create(
                 model=model or "gpt-4o",

@@ -100,7 +100,8 @@ def call_llm_chat(
     if llm_provider == 'anthropic':
         try:
             import anthropic
-            api_key = os.environ.get("ANTHROPIC_API_KEY", "dummy_key" if base_url else None)
+            # Always fallback to a string to prevent None.strip() crash in SDK
+            api_key = os.environ.get("ANTHROPIC_API_KEY", "dummy_key")
             client = anthropic.Anthropic(base_url=base_url, api_key=api_key) if base_url else anthropic.Anthropic(api_key=api_key)
             response = client.messages.create(
                 model=model or 'claude-opus-4-5',
@@ -119,7 +120,7 @@ def call_llm_chat(
             import openai
             # When using custom base_url, we might not need a real api_key, but the client requires one.
             # We supply a dummy key if none is present in the environment to avoid ValidationError.
-            api_key = os.environ.get("OPENAI_API_KEY", "dummy_key" if base_url else None)
+            api_key = os.environ.get("OPENAI_API_KEY", "dummy_key")
             client = openai.OpenAI(base_url=base_url, api_key=api_key) if base_url else openai.OpenAI(api_key=api_key)
             messages = [{'role': 'system', 'content': system_prompt}] + conversation
             response = client.chat.completions.create(
