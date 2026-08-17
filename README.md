@@ -132,4 +132,4 @@ self-mirror/
 
 ---
 
-MIT License © 2026 YourName
+MIT License © 2026 Villain (awesomerex09)
