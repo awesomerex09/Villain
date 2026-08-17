@@ -40,7 +40,7 @@ TMP_DIR = Path(os.environ.get('TEMP', '/tmp'))
 def run_tool(script: str, args_list: list[str]) -> str:
     """Run a tools/ script and return stdout."""
     cmd = [sys.executable, str(TOOLS_DIR / script)] + args_list
-    result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
+    result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
     if result.returncode != 0:
         print(f"[ERROR] {script} failed:\n{result.stderr}", file=sys.stderr)
         sys.exit(1)
@@ -151,7 +151,7 @@ def stage_a_parse(source_type: str, file_path: str = None, dir_path: str = None,
         ])
     
     records = json.loads(tmp_output.read_text(encoding='utf-8'))
-    print(f"[Stage A] ✓ Parsed {len(records)} records.", file=sys.stderr)
+    print(f"[Stage A] [OK] Parsed {len(records)} records.", file=sys.stderr)
     return records
 
 
@@ -173,7 +173,7 @@ def stage_b_clean(records: list[dict], target_name: str, deidentify: bool) -> li
     
     cleaned = json.loads(tmp_output.read_text(encoding='utf-8'))
     target_msgs = [r for r in cleaned if r.get('is_target')]
-    print(f"[Stage B] ✓ Cleaned. Target messages: {len(target_msgs)} / {len(cleaned)} total.", file=sys.stderr)
+    print(f"[Stage B] [OK] Cleaned. Target messages: {len(target_msgs)} / {len(cleaned)} total.", file=sys.stderr)
     return cleaned
 
 
@@ -216,7 +216,7 @@ def stage_d_write(analyses: dict, target_name: str):
     
     report_path = TWIN_PROFILE_DIR / 'objective_report.md'
     report_path.write_text(header + analyses['objective_report'], encoding='utf-8')
-    print(f"[Stage D] ✓ Written: {report_path}", file=sys.stderr)
+    print(f"[Stage D] [OK] Written: {report_path}", file=sys.stderr)
     
     synthesis = analyses['twin_synthesis']
     core_path = TWIN_PROFILE_DIR / f"{target_name}_core.md"
@@ -231,8 +231,8 @@ def stage_d_write(analyses: dict, target_name: str):
         core_path.write_text(header + synthesis, encoding='utf-8')
         style_path.write_text(header + "# Communication Style\n\nGenerated from twin synthesis. See core file.", encoding='utf-8')
     
-    print(f"[Stage D] ✓ Written: {core_path}", file=sys.stderr)
-    print(f"[Stage D] ✓ Written: {style_path}", file=sys.stderr)
+    print(f"[Stage D] [OK] Written: {core_path}", file=sys.stderr)
+    print(f"[Stage D] [OK] Written: {style_path}", file=sys.stderr)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -298,7 +298,7 @@ Examples:
     stage_d_write(analyses, args.target_name)
 
     print("\n" + "=" * 60)
-    print("  ✓ Digital Twin built successfully!")
+    print("  [OK] Digital Twin built successfully!")
     print(f"  Profile saved to: twin_profile/")
     print("=" * 60)
     print("\nNext step: python talk_to_myself.py\n")
