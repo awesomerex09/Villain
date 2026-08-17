@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Self-Mirror</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="glass-header">
+            <div class="header-left">
+                <h1>Self-Mirror</h1>
+            </div>
+            <div class="header-right">
+                <button id="btn-shutdown" class="btn-destructive">關閉系統</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="content-wrapper">
+            
+            <!-- Setup & Upload Section -->
+            <section id="setup-section" class="card glass-card">
+                <h2>1. 設定與匯入</h2>
+                
+                <div class="form-group">
+                    <label for="target-name">你的名字 (Target Name)</label>
+                    <input type="text" id="target-name" placeholder="例如: Villain" value="Villain">
+                </div>
+
+                <div class="form-group">
+                    <label for="llm-provider">LLM 模型 (Provider)</label>
+                    <select id="llm-provider">
+                        <option value="demo">Dry-Run (測試用，無須 API Key)</option>
+                        <option value="anthropic">Anthropic (Claude)</option>
+                        <option value="openai">OpenAI (GPT-4o)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="api-key-group" style="display: none;">
+                    <label for="api-key">API Key</label>
+                    <input type="password" id="api-key" placeholder="輸入 API 金鑰">
+                </div>
+
+                <div class="upload-area" id="upload-area">
+                    <p>拖曳對話檔案 (.txt) 到這裡，或點擊選擇檔案</p>
+                    <input type="file" id="file-input" multiple accept=".txt,.log,.csv" style="display: none;">
+                </div>
+                <div id="file-list" class="file-list"></div>
+
+                <button id="btn-build" class="btn-primary" disabled>開始建置數位雙生</button>
+                
+                <div id="build-log" class="log-console" style="display: none;"></div>
+            </section>
+
+            <!-- Chat Section -->
+            <section id="chat-section" class="card glass-card" style="display: none;">
+                <div class="chat-header">
+                    <h2>與自己對話</h2>
+                    <span class="status-indicator"></span>
+                </div>
+                
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message system">
+                        <div class="bubble">數位雙生已準備就緒。輸入你想諮詢的情境或決定。</div>
+                    </div>
+                </div>
+
+                <div class="chat-input-area">
+                    <textarea id="chat-input" placeholder="例如：這檔股票破停損了，該加碼嗎？" rows="1"></textarea>
+                    <button id="btn-send" class="btn-primary">發送</button>
+                </div>
+            </section>
+            
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
