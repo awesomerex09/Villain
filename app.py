@@ -31,9 +31,11 @@ def upload_chats():
     saved_files = []
     for file in files:
         if file.filename:
-            file_path = DATA_DIR / file.filename
+            # Extract just the filename to flatten folder structure
+            filename = os.path.basename(file.filename)
+            file_path = DATA_DIR / filename
             file.save(str(file_path))
-            saved_files.append(file.filename)
+            saved_files.append(filename)
 
     return jsonify({'success': True, 'files': saved_files})
 
