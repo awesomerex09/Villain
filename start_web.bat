@@ -19,24 +19,20 @@ if %errorlevel% neq 0 (
     %PYTHON_CMD% -m pip install -r requirements.txt
 )
 
-echo [2/3] Starting Backend Server on port 3004...
+echo [2/3] Opening Web Interface...
+start http://127.0.0.1:3004
+
+echo [3/3] Starting Backend Server on port 3004...
 set PORT=3004
 set FLASK_APP=app.py
 
-:: Start Flask server in the background and wait a bit
-start /b cmd /c "%PYTHON_CMD% app.py"
-timeout /t 3 /nobreak > nul
-
-echo [3/3] Opening Web Interface...
-start http://127.0.0.1:3004
-
 echo.
 echo ==============================================
-echo  [SUCCESS] Self-Mirror Web is running!
+echo  [SUCCESS] Self-Mirror Web is starting!
 echo  Please use the web interface in your browser.
 echo.
-echo  Note: To stop the server, click "Shutdown System" 
-echo  (the red button) in the top right corner 
-echo  of the web interface, or close this window.
+echo  Note: To stop the server, close this window.
 echo ==============================================
-pause
+echo.
+
+%PYTHON_CMD% app.py
